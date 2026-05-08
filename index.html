@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pearl.exe — Interactive Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --pink: #F4C0D1;
+  --pink-deep: #D4537E;
+  --pink-soft: #FBEAF0;
+  --black: #0d0d0d;
+  --dark: #1a1014;
+  --tile: #1e1218;
+  --tile2: #231520;
+  --wall: #2a1a22;
+  --white: #ffffff;
+  --pixel: 'Press Start 2P', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --serif: 'Cormorant Garamond', serif;
+  --hud-bg: rgba(13,10,12,0.92);
+  --neon: #ff6baa;
+  --neon2: #c84b80;
+  --gold: #ffd700;
+  --teal: #4ecdc4;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--black);
+  font-family: var(--sans);
+  user-select: none;
+}
+
+/* ─── BOOT SCREEN ─── */
+#boot {
+  position: fixed; inset: 0;
+  background: #000;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 1000;
+  gap: 1.5rem;
+}
+#boot .boot-logo {
+  font-family: var(--pixel);
+  font-size: clamp(1.2rem, 3vw, 2rem);
+  color: var(--pink-deep);
+  text-shadow: 0 0 20px var(--pink-deep), 0 0 40px rgba(212,83,126,0.3);
+  letter-spacing: 0.1em;
+  animation: flicker 2s ease-in-out infinite alternate;
+}
+@keyframes flicker {
+  0%,100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.4; }
+  94% { opacity: 1; }
+  97% { opacity: 0.6; }
+}
+#boot .boot-sub {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  color: #666;
+  letter-spacing: 0.2em;
+}
+#boot .boot-bar-wrap {
+  width: 300px;
+  border: 2px solid var(--pink-deep);
+  padding: 3px;
+  margin-top: 1rem;
+}
+#boot .boot-bar {
+  height: 12px;
+  background: var(--pink-deep);
+  width: 0%;
+  transition: width 0.05s linear;
+  box-shadow: 0 0 10px var(--pink-deep);
+}
+#boot .boot-text {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  color: #555;
+  letter-spacing: 0.1em;
+  min-height: 1.5em;
+}
+#boot .start-btn {
+  font-family: var(--pixel);
+  font-size: 0.6rem;
+  color: var(--black);
+  background: var(--pink-deep);
+  border: none;
+  padding: 0.8rem 2rem;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  display: none;
+  animation: pulse-btn 1s ease-in-out infinite alternate;
+  box-shadow: 0 0 20px rgba(212,83,126,0.5);
+}
+@keyframes pulse-btn {
+  from { box-shadow: 0 0 10px rgba(212,83,126,0.5); transform: scale(1); }
+  to   { box-shadow: 0 0 30px rgba(212,83,126,0.8); transform: scale(1.03); }
+}
+
+/* ─── MAIN GAME WRAPPER ─── */
+#game-world {
+  position: fixed; inset: 0;
+  display: none;
+  flex-direction: column;
+}
+
+/* ─── HUD ─── */
+#hud {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 52px;
+  background: var(--hud-bg);
+  border-bottom: 2px solid var(--pink-deep);
+  display: flex; align-items: center;
+  padding: 0 1.5rem;
+  gap: 2rem;
+  z-index: 500;
+  backdrop-filter: blur(10px);
+}
+.hud-logo {
+  font-family: var(--pixel);
+  font-size: 0.6rem;
+  color: var(--pink-deep);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px var(--pink-deep);
+  white-space: nowrap;
+}
+.hud-sep { width: 1px; height: 24px; background: rgba(212,83,126,0.3); }
+#hud-room-name {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  color: var(--pink);
+  letter-spacing: 0.1em;
+  flex: 1;
+}
+#hud-achievements {
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 6px var(--gold);
+}
+.hud-controls {
+  font-family: var(--pixel);
+  font-size: 0.38rem;
+  color: #555;
+  letter-spacing: 0.05em;
+  display: flex; gap: 1rem;
+}
+.hud-key {
+  background: #222;
+  border: 1px solid #444;
+  padding: 0.2em 0.4em;
+  color: #aaa;
+  font-size: 0.38rem;
+}
+
+/* ─── WORLD CANVAS ─── */
+#world {
+  position: fixed;
+  top: 52px; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+}
+#map-container {
+  position: absolute;
+  transform-origin: 0 0;
+  /* width/height set by JS */
+}
+
+/* ─── TILE MAP ─── */
+.tile-floor {
+  position: absolute;
+  background: var(--tile);
+  /* tiles drawn by JS */
+}
+
+/* ─── ROOM PANELS ─── */
+.room {
+  position: absolute;
+  border: 3px solid rgba(212,83,126,0.4);
+  background: var(--tile);
+  overflow: hidden;
+}
+.room-label {
+  position: absolute;
+  top: -26px; left: 0;
+  font-family: var(--pixel);
+  font-size: 0.38rem;
+  color: var(--pink-deep);
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 6px rgba(212,83,126,0.6);
+  white-space: nowrap;
+}
+
+/* ─── ROOM CONTENT ─── */
+.room-content {
+  position: absolute;
+  inset: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+.room-title {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  color: var(--pink-deep);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px rgba(212,83,126,0.5);
+  border-bottom: 1px solid rgba(212,83,126,0.3);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+.room-body {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: #bba8b2;
+  line-height: 1.6;
+}
+.room-body strong { color: var(--pink); }
+.room-body em { color: var(--teal); font-style: normal; }
+
+/* decorative pixel corners on rooms */
+.room::before, .room::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  border-color: var(--pink-deep);
+  border-style: solid;
+  z-index: 2;
+}
+.room::before { top: -1px; left: -1px; border-width: 3px 0 0 3px; }
+.room::after  { bottom: -1px; right: -1px; border-width: 0 3px 3px 0; }
+
+/* ─── FURNITURE / DECORATIVE ELEMENTS ─── */
+.furniture {
+  position: absolute;
+  pointer-events: none;
+}
+.pixel-desk {
+  width: 80px; height: 32px;
+  background: #3a2030;
+  border: 2px solid #5a3050;
+  border-radius: 2px;
+}
+.pixel-desk::after {
+  content: '💻';
+  position: absolute;
+  top: -18px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+}
+.pixel-bookshelf {
+  width: 40px; height: 64px;
+  background: #2e1a28;
+  border: 2px solid #4a2a40;
+  display: flex; flex-direction: column;
+  gap: 4px; padding: 4px;
+}
+.pixel-book {
+  flex: 1;
+  border-radius: 1px;
+}
+.pixel-plant {
+  font-size: 24px;
+  line-height: 1;
+}
+.pixel-trophy {
+  font-size: 20px;
+}
+.pixel-npc {
+  position: absolute;
+  font-size: 26px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  z-index: 10;
+  filter: drop-shadow(0 0 4px rgba(212,83,126,0.6));
+  animation: npc-idle 2s ease-in-out infinite alternate;
+}
+.pixel-npc:hover { transform: scale(1.2) translateY(-4px); }
+@keyframes npc-idle {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+
+/* ─── DOORS / PORTALS ─── */
+.door {
+  position: absolute;
+  width: 32px; height: 48px;
+  background: linear-gradient(180deg, #4a1030 0%, #3a0820 100%);
+  border: 2px solid var(--pink-deep);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: background 0.3s, box-shadow 0.3s;
+  box-shadow: 0 0 8px rgba(212,83,126,0.3);
+}
+.door:hover, .door.active {
+  background: linear-gradient(180deg, var(--pink-deep) 0%, #9a2050 100%);
+  box-shadow: 0 0 20px rgba(212,83,126,0.8);
+}
+.door-label {
+  position: absolute;
+  bottom: -20px;
+  font-family: var(--pixel);
+  font-size: 0.3rem;
+  color: var(--pink);
+  white-space: nowrap;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+/* ─── PLAYER CHARACTER ─── */
+#player {
+  position: absolute;
+  width: 32px; height: 32px;
+  z-index: 100;
+  pointer-events: none;
+  transition: transform 0.05s;
+}
+.player-sprite {
+  position: relative;
+  width: 100%; height: 100%;
+}
+/* pixel art character using CSS */
+.player-body {
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+}
+.p-head {
+  width: 16px; height: 14px;
+  background: #f4d4dc;
+  border: 2px solid #c4a0b0;
+  position: relative;
+  left: 50%; transform: translateX(-50%);
+  margin-bottom: 1px;
+  border-radius: 2px 2px 0 0;
+}
+.p-hair {
+  position: absolute;
+  top: -4px; left: -1px;
+  width: 18px; height: 8px;
+  background: var(--pink-deep);
+  border-radius: 4px 4px 0 0;
+}
+.p-eyes {
+  position: absolute;
+  top: 4px; left: 2px;
+  width: 12px; height: 3px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.p-eye {
+  width: 3px; height: 3px;
+  background: #1a1a1a;
+  border-radius: 50%;
+}
+.p-torso {
+  width: 14px; height: 12px;
+  background: var(--pink-deep);
+  border: 2px solid #a43060;
+  left: 50%; transform: translateX(-50%);
+  position: relative;
+  margin-bottom: 1px;
+}
+.p-legs {
+  width: 14px; height: 8px;
+  display: flex; gap: 2px;
+  left: 50%; transform: translateX(-50%);
+  position: relative;
+}
+.p-leg {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  transition: height 0.1s;
+}
+
+/* walking animation */
+#player.walking .p-leg:first-child { animation: leg-l 0.3s steps(2) infinite; }
+#player.walking .p-leg:last-child  { animation: leg-r 0.3s steps(2) infinite; }
+@keyframes leg-l {
+  0%   { transform: scaleY(1); }
+  50%  { transform: scaleY(0.6); }
+}
+@keyframes leg-r {
+  0%   { transform: scaleY(0.6); }
+  50%  { transform: scaleY(1); }
+}
+#player.walking .p-head { animation: head-bob 0.3s steps(2) infinite; }
+@keyframes head-bob {
+  0%,100% { margin-bottom: 1px; }
+  50% { margin-bottom: 2px; }
+}
+
+/* ─── SPEECH BUBBLE ─── */
+#speech-bubble {
+  position: fixed;
+  background: #0d0d0d;
+  border: 2px solid var(--pink-deep);
+  padding: 12px 16px;
+  max-width: 340px;
+  z-index: 600;
+  display: none;
+  pointer-events: none;
+  box-shadow: 0 0 20px rgba(212,83,126,0.3);
+}
+#speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px; left: 20px;
+  border: 5px solid transparent;
+  border-top-color: var(--pink-deep);
+}
+.bubble-name {
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  color: var(--pink-deep);
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.bubble-text {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: #ddd;
+  line-height: 1.5;
+}
+
+/* ─── MODAL OVERLAY (room detail) ─── */
+#modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 800;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--dark);
+  border: 3px solid var(--pink-deep);
+  max-width: 640px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 2rem;
+  position: relative;
+  box-shadow: 0 0 60px rgba(212,83,126,0.3);
+  animation: modal-in 0.25s ease;
+}
+@keyframes modal-in {
+  from { transform: scale(0.9) translateY(20px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal-close {
+  position: absolute;
+  top: 12px; right: 16px;
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  color: var(--pink-deep);
+  cursor: pointer;
+  background: none; border: none;
+  padding: 4px 8px;
+  transition: color 0.2s;
+  letter-spacing: 0.1em;
+}
+.modal-close:hover { color: var(--pink); }
+.modal-title {
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  color: var(--pink-deep);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 12px rgba(212,83,126,0.5);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(212,83,126,0.3);
+}
+.modal-section {
+  margin-bottom: 1.4rem;
+}
+.modal-section-label {
+  font-family: var(--pixel);
+  font-size: 0.38rem;
+  color: var(--pink);
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+}
+.modal-text {
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: #bba8b2;
+  line-height: 1.7;
+}
+.modal-tags {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;
+}
+.modal-tag {
+  font-family: var(--pixel);
+  font-size: 0.32rem;
+  background: rgba(212,83,126,0.15);
+  border: 1px solid rgba(212,83,126,0.4);
+  color: var(--pink);
+  padding: 0.3em 0.6em;
+  letter-spacing: 0.1em;
+}
+.modal-project-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.modal-project-card {
+  background: var(--tile);
+  border: 1px solid rgba(212,83,126,0.25);
+  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.modal-project-card:hover {
+  border-color: var(--pink-deep);
+  box-shadow: 0 0 12px rgba(212,83,126,0.2);
+}
+.modal-project-name {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  color: var(--pink);
+  font-style: italic;
+  margin-bottom: 0.4rem;
+}
+.modal-project-desc {
+  font-size: 0.78rem;
+  color: #888;
+  line-height: 1.5;
+}
+.modal-exp-row {
+  display: flex; gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(212,83,126,0.12);
+  align-items: flex-start;
+}
+.modal-exp-year {
+  font-family: var(--pixel);
+  font-size: 0.35rem;
+  color: var(--pink-deep);
+  min-width: 60px;
+  padding-top: 3px;
+}
+.modal-exp-role {
+  font-size: 0.88rem;
+  color: var(--white);
+  font-weight: 500;
+}
+.modal-exp-company {
+  font-size: 0.78rem;
+  color: #666;
+}
+.modal-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.modal-skill {
+  font-family: var(--pixel);
+  font-size: 0.32rem;
+  text-align: center;
+  padding: 0.5em;
+  border: 1px solid rgba(78,205,196,0.3);
+  color: var(--teal);
+  background: rgba(78,205,196,0.05);
+  letter-spacing: 0.05em;
+}
+
+/* ─── ACHIEVEMENT TOAST ─── */
+#achievement-toast {
+  position: fixed;
+  top: 64px; right: 20px;
+  background: #0d0d0d;
+  border: 2px solid var(--gold);
+  padding: 12px 16px;
+  z-index: 700;
+  display: none;
+  min-width: 240px;
+  box-shadow: 0 0 30px rgba(255,215,0,0.2);
+  animation: toast-slide 0.4s ease;
+}
+@keyframes toast-slide {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.toast-header {
+  font-family: var(--pixel);
+  font-size: 0.35rem;
+  color: var(--gold);
+  letter-spacing: 0.15em;
+  margin-bottom: 4px;
+}
+.toast-text {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: #ddd;
+}
+
+/* ─── WALLS ─── */
+.wall-h {
+  position: absolute;
+  height: 16px;
+  background: repeating-linear-gradient(90deg, var(--wall) 0px, var(--wall) 30px, #2e1f28 30px, #2e1f28 32px);
+  border-top: 2px solid #3a2530;
+  border-bottom: 2px solid #1a0d14;
+}
+.wall-v {
+  position: absolute;
+  width: 16px;
+  background: repeating-linear-gradient(180deg, var(--wall) 0px, var(--wall) 30px, #2e1f28 30px, #2e1f28 32px);
+  border-left: 2px solid #3a2530;
+  border-right: 2px solid #1a0d14;
+}
+
+/* ─── FLOOR TILES ─── */
+#floor-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+}
+
+/* ─── MINIMAP ─── */
+#minimap {
+  position: fixed;
+  bottom: 16px; right: 16px;
+  background: rgba(13,10,12,0.9);
+  border: 2px solid rgba(212,83,126,0.5);
+  padding: 8px;
+  z-index: 500;
+}
+#minimap-canvas {
+  display: block;
+}
+.minimap-label {
+  font-family: var(--pixel);
+  font-size: 0.3rem;
+  color: var(--pink-deep);
+  text-align: center;
+  margin-bottom: 4px;
+  letter-spacing: 0.1em;
+}
+
+/* ─── SCROLL / INTERACT HINT ─── */
+#interact-hint {
+  position: fixed;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13,10,12,0.9);
+  border: 1px solid var(--pink-deep);
+  padding: 6px 14px;
+  font-family: var(--pixel);
+  font-size: 0.38rem;
+  color: var(--pink);
+  letter-spacing: 0.1em;
+  z-index: 500;
+  display: none;
+  animation: hint-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes hint-pulse {
+  from { box-shadow: 0 0 4px rgba(212,83,126,0.3); }
+  to   { box-shadow: 0 0 16px rgba(212,83,126,0.7); }
+}
+
+/* ─── FLOOR GRID PATTERN ─── */
+.floor-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(212,83,126,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,83,126,0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+/* scrollbar */
+.modal-box::-webkit-scrollbar { width: 4px; }
+.modal-box::-webkit-scrollbar-track { background: var(--dark); }
+.modal-box::-webkit-scrollbar-thumb { background: var(--pink-deep); }
+
+/* ─── ITEM COLLECTIBLE ─── */
+.collectible {
+  position: absolute;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 20;
+  animation: float-item 2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px rgba(255,215,0,0.6));
+}
+@keyframes float-item {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-6px); }
+}
+.collectible.collected { display: none; }
+</style>
+</head>
+<body>
+
+<!-- BOOT SCREEN -->
+<div id="boot">
+  <div class="boot-logo">PEARL.EXE</div>
+  <div class="boot-sub">SOFTWARE ENGINEER — JOHANNESBURG ZA</div>
+  <div class="boot-bar-wrap"><div class="boot-bar" id="boot-bar"></div></div>
+  <div class="boot-text" id="boot-text">LOADING PORTFOLIO...</div>
+  <button class="start-btn" id="start-btn" onclick="startGame()">▶ PRESS START</button>
+</div>
+
+<!-- GAME WORLD -->
+<div id="game-world">
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-logo">PEARL.EXE</div>
+    <div class="hud-sep"></div>
+    <div id="hud-room-name">CENTRAL HUB</div>
+    <div id="hud-achievements">🏆 0 / 6 ACHIEVEMENTS</div>
+    <div class="hud-controls">
+      <span><span class="hud-key">WASD</span> or <span class="hud-key">ARROWS</span> MOVE</span>
+      <span><span class="hud-key">E</span> INTERACT</span>
+      <span><span class="hud-key">ESC</span> CLOSE</span>
+    </div>
+  </div>
+
+  <!-- WORLD -->
+  <div id="world">
+    <div class="floor-bg"></div>
+    <canvas id="floor-canvas"></canvas>
+    <div id="map-container">
+      <!-- Rooms, walls, NPCs rendered by JS -->
+    </div>
+  </div>
+
+  <!-- PLAYER -->
+  <div id="player">
+    <div class="player-sprite">
+      <div class="player-body">
+        <div class="p-head">
+          <div class="p-hair"></div>
+          <div class="p-eyes">
+            <div class="p-eye"></div>
+            <div class="p-eye"></div>
+          </div>
+        </div>
+        <div class="p-torso"></div>
+        <div class="p-legs">
+          <div class="p-leg"></div>
+          <div class="p-leg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SPEECH BUBBLE -->
+<div id="speech-bubble">
+  <div class="bubble-name" id="bubble-name">PEARL</div>
+  <div class="bubble-text" id="bubble-text"></div>
+</div>
+
+<!-- INTERACT HINT -->
+<div id="interact-hint" id="interact-hint-el">Press E to interact</div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div class="modal-box" id="modal-box">
+    <button class="modal-close" onclick="closeModal()">[ X ]</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- ACHIEVEMENT TOAST -->
+<div id="achievement-toast">
+  <div class="toast-header">🏆 ACHIEVEMENT UNLOCKED!</div>
+  <div class="toast-text" id="toast-text"></div>
+</div>
+
+<!-- MINIMAP -->
+<div id="minimap">
+  <div class="minimap-label">MAP</div>
+  <canvas id="minimap-canvas" width="120" height="90"></canvas>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// BOOT SEQUENCE
+// ─────────────────────────────────────────
+const bootMessages = [
+  'LOADING PORTFOLIO...',
+  'CALIBRATING SKILLS...',
+  'RENDERING PINK PIXELS...',
+  'COMPILING PROJECTS...',
+  'INITIALIZING AWESOME...',
+  'READY.'
+];
+let bootProgress = 0;
+const bootBar = document.getElementById('boot-bar');
+const bootText = document.getElementById('boot-text');
+const startBtn = document.getElementById('start-btn');
+
+function bootStep() {
+  bootProgress += Math.random() * 18 + 8;
+  if (bootProgress >= 100) {
+    bootProgress = 100;
+    bootBar.style.width = '100%';
+    bootText.textContent = 'READY.';
+    startBtn.style.display = 'block';
+    return;
+  }
+  bootBar.style.width = bootProgress + '%';
+  const msgIdx = Math.floor((bootProgress / 100) * (bootMessages.length - 1));
+  bootText.textContent = bootMessages[msgIdx];
+  setTimeout(bootStep, 120 + Math.random() * 200);
+}
+setTimeout(bootStep, 400);
+
+// ─────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────
+const TILE = 32;
+const MAP_W = 56; // tiles wide
+const MAP_H = 42; // tiles tall
+
+let player = {
+  x: 28 * TILE,  // world px
+  y: 21 * TILE,
+  speed: 3.2,
+  facing: 'down'
+};
+
+let camera = { x: 0, y: 0 };
+let keys = {};
+let achievements = new Set();
+let achievementCount = 0;
+let nearInteractable = null;
+let isMoving = false;
+
+const WORLD_W = MAP_W * TILE;
+const WORLD_H = MAP_H * TILE;
+
+// ─────────────────────────────────────────
+// ROOMS DEFINITION
+// ─────────────────────────────────────────
+const rooms = [
+  {
+    id: 'hub',
+    label: '[ CENTRAL HUB ]',
+    name: 'CENTRAL HUB',
+    x: 18 * TILE, y: 14 * TILE,
+    w: 20 * TILE, h: 14 * TILE,
+    color: 'rgba(212,83,126,0.08)',
+    border: 'rgba(212,83,126,0.5)',
+    npc: { emoji: '👩‍💻', dx: 10*TILE, dy: 7*TILE, name: 'PEARL',
+      lines: [
+        "Hi! I'm Pearl, a full-stack software engineer based in Johannesburg 💕",
+        "Use WASD or arrow keys to explore my portfolio world!",
+        "Each room contains a piece of my story. Press E near doors to enter!",
+        "There are 6 hidden achievements to unlock... 👀",
+        "I build beautiful, functional software with care and precision ✨"
+      ]
+    },
+    content: null
+  },
+  {
+    id: 'about',
+    label: '[ ROOM 01 — ABOUT ]',
+    name: 'ABOUT ROOM',
+    x: 2 * TILE, y: 2 * TILE,
+    w: 14 * TILE, h: 12 * TILE,
+    color: 'rgba(212,83,126,0.05)',
+    border: 'rgba(212,83,126,0.35)',
+    npc: null,
+    content: {
+      title: 'ABOUT PEARL',
+      type: 'about'
+    }
+  },
+  {
+    id: 'projects',
+    label: '[ ROOM 02 — PROJECTS ]',
+    name: 'PROJECTS LAB',
+    x: 40 * TILE, y: 2 * TILE,
+    w: 14 * TILE, h: 12 * TILE,
+    color: 'rgba(78,205,196,0.05)',
+    border: 'rgba(78,205,196,0.35)',
+    npc: null,
+    content: { title: 'PROJECTS LAB', type: 'projects' }
+  },
+  {
+    id: 'skills',
+    label: '[ ROOM 03 — SKILLS ]',
+    name: 'SKILLS FORGE',
+    x: 2 * TILE, y: 28 * TILE,
+    w: 14 * TILE, h: 12 * TILE,
+    color: 'rgba(255,215,0,0.04)',
+    border: 'rgba(255,215,0,0.3)',
+    npc: null,
+    content: { title: 'SKILLS FORGE', type: 'skills' }
+  },
+  {
+    id: 'services',
+    label: '[ ROOM 04 — SERVICES ]',
+    name: 'SERVICES HQ',
+    x: 40 * TILE, y: 28 * TILE,
+    w: 14 * TILE, h: 12 * TILE,
+    color: 'rgba(180,100,200,0.05)',
+    border: 'rgba(180,100,200,0.35)',
+    npc: null,
+    content: { title: 'SERVICES HQ', type: 'services' }
+  },
+  {
+    id: 'contact',
+    label: '[ ROOM 05 — CONTACT ]',
+    name: 'COMM ROOM',
+    x: 18 * TILE, y: 30 * TILE,
+    w: 20 * TILE, h: 10 * TILE,
+    color: 'rgba(212,83,126,0.06)',
+    border: 'rgba(212,83,126,0.4)',
+    npc: null,
+    content: { title: 'COMM ROOM', type: 'contact' }
+  }
+];
+
+// Doors between rooms
+const doors = [
+  { fromRoom: 'hub', toRoom: 'about',    x: 18*TILE + 6*TILE, y: 14*TILE,     label: 'ABOUT' },
+  { fromRoom: 'hub', toRoom: 'projects', x: 38*TILE,           y: 14*TILE + 5*TILE, label: 'PROJECTS' },
+  { fromRoom: 'hub', toRoom: 'skills',   x: 18*TILE + 6*TILE, y: 28*TILE,     label: 'SKILLS' },
+  { fromRoom: 'hub', toRoom: 'services', x: 38*TILE,           y: 14*TILE + 9*TILE, label: 'SERVICES' },
+  { fromRoom: 'hub', toRoom: 'contact',  x: 18*TILE + 10*TILE, y: 28*TILE,    label: 'CONTACT' },
+];
+
+// Collectibles (Easter eggs)
+const collectibles = [
+  { id: 'c1', emoji: '💎', x: 5*TILE, y: 5*TILE, msg: 'SECRET FOUND: Pearl once wrote 2000 lines of CSS in one sitting!' },
+  { id: 'c2', emoji: '⭐', x: 43*TILE, y: 5*TILE, msg: 'SECRET FOUND: Pearl\'s first program was a Hello World in Python at age 16!' },
+  { id: 'c3', emoji: '🎮', x: 5*TILE, y: 31*TILE, msg: 'SECRET FOUND: Pearl designed a game in her spare time — meta!' },
+  { id: 'c4', emoji: '☕', x: 43*TILE, y: 31*TILE, msg: 'SECRET FOUND: Pearl runs on coffee and late-night debugging sessions.' },
+  { id: 'c5', emoji: '🌸', x: 28*TILE, y: 2*TILE, msg: 'SECRET FOUND: Pearl hand-picks every gradient in her UIs.' },
+];
+
+const collected = new Set();
+
+// ─────────────────────────────────────────
+// START GAME
+// ─────────────────────────────────────────
+function startGame() {
+  document.getElementById('boot').style.display = 'none';
+  document.getElementById('game-world').style.display = 'flex';
+  initWorld();
+  gameLoop();
+}
+
+// ─────────────────────────────────────────
+// WORLD INIT
+// ─────────────────────────────────────────
+function initWorld() {
+  const mapEl = document.getElementById('map-container');
+  mapEl.style.width  = WORLD_W + 'px';
+  mapEl.style.height = WORLD_H + 'px';
+
+  // Floor canvas
+  const canvas = document.getElementById('floor-canvas');
+  canvas.width  = WORLD_W;
+  canvas.height = WORLD_H;
+  canvas.style.width  = WORLD_W + 'px';
+  canvas.style.height = WORLD_H + 'px';
+  drawFloor(canvas);
+
+  // Rooms
+  rooms.forEach(r => {
+    const el = document.createElement('div');
+    el.className = 'room';
+    el.id = 'room-' + r.id;
+    el.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;background:${r.color};border-color:${r.border};`;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'room-label';
+    lbl.textContent = r.label;
+    el.appendChild(lbl);
+
+    // Room mini preview
+    const content = document.createElement('div');
+    content.className = 'room-content';
+    content.innerHTML = buildRoomPreview(r);
+    el.appendChild(content);
+
+    // NPC
+    if (r.npc) {
+      const npc = document.createElement('div');
+      npc.className = 'pixel-npc';
+      npc.textContent = r.npc.emoji;
+      npc.style.cssText = `left:${r.npc.dx}px;top:${r.npc.dy}px;`;
+      npc.dataset.roomId = r.id;
+      el.appendChild(npc);
+    }
+
+    mapEl.appendChild(el);
+  });
+
+  // Doors
+  doors.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'door';
+    el.id = 'door-' + i;
+    el.style.cssText = `left:${d.x}px;top:${d.y}px;`;
+    el.innerHTML = `<span style="font-size:16px">🚪</span><div class="door-label">${d.label}</div>`;
+    el.dataset.toRoom = d.toRoom;
+    mapEl.appendChild(el);
+  });
+
+  // Collectibles
+  collectibles.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'collectible';
+    el.id = 'col-' + c.id;
+    el.textContent = c.emoji;
+    el.style.cssText = `left:${c.x}px;top:${c.y}px;`;
+    mapEl.appendChild(el);
+  });
+
+  // Center camera on player spawn
+  player.x = 28 * TILE;
+  player.y = 21 * TILE;
+  updateCamera();
+  updatePlayerEl();
+
+  // Event listeners
+  window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    keys[e.code] = true;
+    if ((e.key === 'e' || e.key === 'E') && nearInteractable) {
+      handleInteract();
+    }
+    if (e.key === 'Escape') closeModal();
+  });
+  window.addEventListener('keyup', e => {
+    keys[e.key.toLowerCase()] = false;
+    keys[e.code] = false;
+  });
+
+  // Mobile controls (on-screen)
+  initMobileControls();
+  drawMinimap();
+}
+
+function buildRoomPreview(r) {
+  if (r.id === 'hub') {
+    return `<div class="room-title">⌂ WELCOME</div>
+    <div class="room-body">Explore each room to learn about Pearl.<br><br>
+    <strong>Pearl Doe</strong><br>
+    <em>Full-Stack Engineer</em><br>
+    Johannesburg, ZA</div>`;
+  }
+  if (r.id === 'about') {
+    return `<div class="room-title">◈ ABOUT</div>
+    <div class="room-body">5+ years building <strong>beautiful</strong> software.<br>React · Node · Python<br><br>Press E at door →</div>`;
+  }
+  if (r.id === 'projects') {
+    return `<div class="room-title">◈ PROJECTS</div>
+    <div class="room-body"><strong>6</strong> projects shipped<br>E-commerce · AI · Design Systems<br><br>Press E at door →</div>`;
+  }
+  if (r.id === 'skills') {
+    return `<div class="room-title">◈ SKILLS</div>
+    <div class="room-body">Full-stack capability<br>Frontend · Backend · DevOps<br><br>Press E at door →</div>`;
+  }
+  if (r.id === 'services') {
+    return `<div class="room-title">◈ SERVICES</div>
+    <div class="room-body">6 service areas<br>Dev · UX · API · Consulting<br><br>Press E at door →</div>`;
+  }
+  if (r.id === 'contact') {
+    return `<div class="room-title">◈ CONTACT</div>
+    <div class="room-body"><strong>Available</strong> for new projects<br>hello@pearl.dev<br>Johannesburg, ZA</div>`;
+  }
+  return '';
+}
+
+// ─────────────────────────────────────────
+// FLOOR DRAWING
+// ─────────────────────────────────────────
+function drawFloor(canvas) {
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+  for (let ty = 0; ty < MAP_H; ty++) {
+    for (let tx = 0; tx < MAP_W; tx++) {
+      const dark = (tx + ty) % 2 === 0;
+      ctx.fillStyle = dark ? '#12090f' : '#150c12';
+      ctx.fillRect(tx * TILE, ty * TILE, TILE, TILE);
+      ctx.strokeStyle = 'rgba(212,83,126,0.04)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx * TILE + 0.5, ty * TILE + 0.5, TILE - 1, TILE - 1);
+    }
+  }
+
+  // Highlight room floors
+  rooms.forEach(r => {
+    const tx0 = Math.floor(r.x / TILE);
+    const ty0 = Math.floor(r.y / TILE);
+    const txN = Math.ceil(r.w / TILE);
+    const tyN = Math.ceil(r.h / TILE);
+    for (let ty = ty0; ty < ty0 + tyN; ty++) {
+      for (let tx = tx0; tx < tx0 + txN; tx++) {
+        const dark = (tx + ty) % 2 === 0;
+        ctx.fillStyle = dark ? '#1a0f16' : '#1e1219';
+        ctx.fillRect(tx * TILE, ty * TILE, TILE, TILE);
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────
+// CAMERA & PLAYER RENDERING
+// ─────────────────────────────────────────
+function updateCamera() {
+  const viewW = window.innerWidth;
+  const viewH = window.innerHeight - 52;
+  camera.x = player.x - viewW / 2;
+  camera.y = player.y - viewH / 2;
+  camera.x = Math.max(0, Math.min(WORLD_W - viewW, camera.x));
+  camera.y = Math.max(0, Math.min(WORLD_H - viewH, camera.y));
+}
+
+function updatePlayerEl() {
+  const el = document.getElementById('player');
+  const screenX = player.x - camera.x;
+  const screenY = player.y - camera.y + 52;
+  el.style.left = (screenX - 16) + 'px';
+  el.style.top  = (screenY - 32) + 'px';
+}
+
+function applyCamera() {
+  const mapEl = document.getElementById('map-container');
+  mapEl.style.transform = `translate(${-camera.x}px, ${-camera.y}px)`;
+  const floorCanvas = document.getElementById('floor-canvas');
+  floorCanvas.style.transform = `translate(${-camera.x}px, ${-camera.y}px)`;
+}
+
+// ─────────────────────────────────────────
+// COLLISION (room boundaries + world edges)
+// ─────────────────────────────────────────
+function isInsideRoom(room, px, py) {
+  return px >= room.x && px <= room.x + room.w &&
+         py >= room.y && py <= room.y + room.h;
+}
+
+function isWalkable(px, py) {
+  if (px < 8 || px > WORLD_W - 8 || py < 8 || py > WORLD_H - 8) return false;
+  return true;
+}
+
+// ─────────────────────────────────────────
+// INTERACTION DETECTION
+// ─────────────────────────────────────────
+const INTERACT_RADIUS = 48;
+
+function findNearInteractable() {
+  // Check doors
+  for (let i = 0; i < doors.length; i++) {
+    const d = doors[i];
+    const dx = player.x - (d.x + 16);
+    const dy = player.y - (d.y + 24);
+    if (Math.sqrt(dx*dx + dy*dy) < INTERACT_RADIUS) {
+      return { type: 'door', data: d, index: i };
+    }
+  }
+  // Check NPCs
+  for (const r of rooms) {
+    if (r.npc) {
+      const nx = r.x + r.npc.dx;
+      const ny = r.y + r.npc.dy;
+      const dx = player.x - nx;
+      const dy = player.y - ny;
+      if (Math.sqrt(dx*dx + dy*dy) < INTERACT_RADIUS) {
+        return { type: 'npc', data: r };
+      }
+    }
+  }
+  // Check collectibles
+  for (const c of collectibles) {
+    if (collected.has(c.id)) continue;
+    const dx = player.x - c.x;
+    const dy = player.y - c.y;
+    if (Math.sqrt(dx*dx + dy*dy) < INTERACT_RADIUS) {
+      return { type: 'collectible', data: c };
+    }
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────
+// HANDLE INTERACT
+// ─────────────────────────────────────────
+let npcLineIdx = {};
+
+function handleInteract() {
+  if (!nearInteractable) return;
+  const { type, data } = nearInteractable;
+
+  if (type === 'door') {
+    const room = rooms.find(r => r.id === data.toRoom);
+    if (room && room.content) {
+      openModal(room.content);
+      unlockAchievement(data.toRoom);
+    }
+  }
+
+  if (type === 'npc') {
+    const r = data;
+    if (!npcLineIdx[r.id]) npcLineIdx[r.id] = 0;
+    const idx = npcLineIdx[r.id];
+    showSpeechBubble(r.npc.name, r.npc.lines[idx]);
+    npcLineIdx[r.id] = (idx + 1) % r.npc.lines.length;
+  }
+
+  if (type === 'collectible') {
+    collected.add(data.id);
+    document.getElementById('col-' + data.id).classList.add('collected');
+    showToast(data.msg);
+    unlockAchievement('collect_' + data.id);
+    hideSpeechBubble();
+  }
+}
+
+// ─────────────────────────────────────────
+// SPEECH BUBBLE
+// ─────────────────────────────────────────
+let bubbleTimeout;
+function showSpeechBubble(name, text) {
+  const el = document.getElementById('speech-bubble');
+  document.getElementById('bubble-name').textContent = name;
+  document.getElementById('bubble-text').textContent = text;
+
+  const screenX = player.x - camera.x;
+  const screenY = player.y - camera.y + 52;
+  el.style.display = 'block';
+  el.style.left = Math.max(8, Math.min(window.innerWidth - 360, screenX - 120)) + 'px';
+  el.style.top  = Math.max(60, screenY - 120) + 'px';
+
+  clearTimeout(bubbleTimeout);
+  bubbleTimeout = setTimeout(hideSpeechBubble, 4000);
+}
+function hideSpeechBubble() {
+  document.getElementById('speech-bubble').style.display = 'none';
+}
+
+// ─────────────────────────────────────────
+// ACHIEVEMENTS
+// ─────────────────────────────────────────
+const achievementDefs = {
+  about:    '🗺️ Explorer — Opened the About Room!',
+  projects: '🔬 Lab Rat — Opened the Projects Lab!',
+  skills:   '⚔️ Leveled Up — Opened the Skills Forge!',
+  services: '💼 Business — Opened the Services HQ!',
+  contact:  '📡 Connected — Opened the Comm Room!',
+  collect_c1: '💎 Diamond Finder — Found a hidden gem!',
+  collect_c2: '⭐ Stargazer — Found a sparkling secret!',
+  collect_c3: '🎮 Gamer — Found a game easter egg!',
+  collect_c4: '☕ Caffeinated — Found the coffee secret!',
+  collect_c5: '🌸 Botanist — Found the floral secret!',
+};
+
+function unlockAchievement(id) {
+  if (achievements.has(id)) return;
+  achievements.add(id);
+  if (achievementDefs[id]) {
+    showToast(achievementDefs[id]);
+  }
+  const real = Object.keys(achievementDefs).filter(k => achievements.has(k)).length;
+  document.getElementById('hud-achievements').textContent = `🏆 ${real} / ${Object.keys(achievementDefs).length} ACHIEVEMENTS`;
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const el = document.getElementById('achievement-toast');
+  document.getElementById('toast-text').textContent = msg;
+  el.style.display = 'block';
+  el.style.animation = 'none';
+  el.offsetHeight; // reflow
+  el.style.animation = 'toast-slide 0.4s ease';
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    el.style.display = 'none';
+  }, 4000);
+}
+
+// ─────────────────────────────────────────
+// MODALS
+// ─────────────────────────────────────────
+function openModal(content) {
+  const overlay = document.getElementById('modal-overlay');
+  const box = document.getElementById('modal-content');
+  box.innerHTML = buildModalContent(content);
+  overlay.classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function buildModalContent(c) {
+  if (c.type === 'about') return `
+    <div class="modal-title">◈ ${c.title}</div>
+    <div class="modal-section">
+      <div class="modal-section-label">// WHO AM I</div>
+      <div class="modal-text">I'm <strong style="color:var(--pink)">Pearl</strong>, a full-stack software engineer based in Johannesburg, South Africa. I build digital products that are as thoughtful as they are technically sound — from sleek frontends to scalable backend systems.</div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">// PHILOSOPHY</div>
+      <div class="modal-text" style="font-family:var(--serif);font-size:1.2rem;font-style:italic;color:var(--pink);line-height:1.5">"Code is craft. Every line should be written with intention."</div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">// EXPERIENCE</div>
+      <div class="modal-exp-row"><div class="modal-exp-year">2022–NOW</div><div><div class="modal-exp-role">Senior Full-Stack Engineer</div><div class="modal-exp-company">TechFlow Solutions, Johannesburg</div></div></div>
+      <div class="modal-exp-row"><div class="modal-exp-year">2020–22</div><div><div class="modal-exp-role">Frontend Engineer</div><div class="modal-exp-company">Digital Collective, Cape Town</div></div></div>
+      <div class="modal-exp-row"><div class="modal-exp-year">2018–20</div><div><div class="modal-exp-role">Junior Developer</div><div class="modal-exp-company">Startup Labs, Johannesburg</div></div></div>
+    </div>`;
+
+  if (c.type === 'projects') return `
+    <div class="modal-title">◈ ${c.title}</div>
+    <div class="modal-section">
+      <div class="modal-section-label">// FEATURED WORK</div>
+      <div class="modal-project-grid">
+        <div class="modal-project-card">
+          <div class="modal-project-name">Bloom Commerce</div>
+          <div class="modal-project-desc">Full-stack e-commerce platform with React, Node.js and Stripe integration. 40% conversion improvement.</div>
+          <div class="modal-tags"><span class="modal-tag">React</span><span class="modal-tag">Node.js</span><span class="modal-tag">PostgreSQL</span></div>
+        </div>
+        <div class="modal-project-card">
+          <div class="modal-project-name">NightOwl Analytics</div>
+          <div class="modal-project-desc">Real-time dashboard processing 2M+ events/day. Built with WebSockets, Redis and D3.js.</div>
+          <div class="modal-tags"><span class="modal-tag">React</span><span class="modal-tag">Redis</span><span class="modal-tag">D3.js</span></div>
+        </div>
+        <div class="modal-project-card">
+          <div class="modal-project-name">FolioOS</div>
+          <div class="modal-project-desc">Award-winning portfolio CMS used by 500+ creatives globally. Headless CMS + Next.js.</div>
+          <div class="modal-tags"><span class="modal-tag">Next.js</span><span class="modal-tag">GraphQL</span><span class="modal-tag">Prisma</span></div>
+        </div>
+        <div class="modal-project-card">
+          <div class="modal-project-name">Design System</div>
+          <div class="modal-project-desc">Component library with 80+ components, full a11y compliance and dark mode support.</div>
+          <div class="modal-tags"><span class="modal-tag">TypeScript</span><span class="modal-tag">Figma</span></div>
+        </div>
+        <div class="modal-project-card">
+          <div class="modal-project-name">AI Content Tool</div>
+          <div class="modal-project-desc">GPT-4 powered content generation pipeline with custom fine-tuning workflows on AWS.</div>
+          <div class="modal-tags"><span class="modal-tag">Python</span><span class="modal-tag">OpenAI</span><span class="modal-tag">AWS</span></div>
+        </div>
+        <div class="modal-project-card">
+          <div class="modal-project-name">Petal Wellness</div>
+          <div class="modal-project-desc">Cross-platform wellness tracking app with biometric integrations and personalised AI insights.</div>
+          <div class="modal-tags"><span class="modal-tag">React Native</span><span class="modal-tag">Firebase</span></div>
+        </div>
+      </div>
+    </div>`;
+
+  if (c.type === 'skills') return `
+    <div class="modal-title">◈ ${c.title}</div>
+    <div class="modal-section">
+      <div class="modal-section-label">// FRONTEND</div>
+      <div class="modal-skill-grid">
+        ${['React','Next.js','TypeScript','Vue.js','CSS/SASS','Tailwind','Framer Motion','Three.js','D3.js','Figma'].map(s=>`<div class="modal-skill">${s}</div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">// BACKEND</div>
+      <div class="modal-skill-grid">
+        ${['Node.js','Python','GraphQL','REST APIs','PostgreSQL','MongoDB','Redis','Prisma','FastAPI'].map(s=>`<div class="modal-skill" style="border-color:rgba(212,83,126,0.3);color:var(--pink)">${s}</div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">// DEVOPS & TOOLS</div>
+      <div class="modal-skill-grid">
+        ${['AWS','Docker','GitHub Actions','Vercel','Supabase','Jest','Cypress'].map(s=>`<div class="modal-skill" style="border-color:rgba(255,215,0,0.3);color:var(--gold)">${s}</div>`).join('')}
+      </div>
+    </div>`;
+
+  if (c.type === 'services') return `
+    <div class="modal-title">◈ ${c.title}</div>
+    <div class="modal-section">
+      <div class="modal-section-label">// WHAT I OFFER</div>
+      ${[
+        { n:'01. Full-Stack Development', d:'End-to-end web applications built with modern frameworks, scalable architecture, and performance-first mindset.' },
+        { n:'02. UI/UX Engineering', d:'Pixel-perfect interfaces that blend design intuition with technical precision — beautiful and functional.' },
+        { n:'03. API Architecture', d:'Robust RESTful and GraphQL APIs designed for scale, security, and seamless developer experience.' },
+        { n:'04. Technical Consulting', d:'Strategic guidance on tech stack decisions, code reviews, and engineering best practices.' },
+        { n:'05. Performance Optimisation', d:'Audit, diagnose, and transform slow applications into lightning-fast experiences.' },
+        { n:'06. Design Systems', d:'Scalable component libraries and design tokens that keep your product consistent across every surface.' }
+      ].map(s=>`<div style="padding:0.75rem 0;border-bottom:1px solid rgba(212,83,126,0.1)">
+        <div style="font-family:var(--pixel);font-size:0.38rem;color:var(--pink-deep);letter-spacing:0.1em;margin-bottom:4px">${s.n}</div>
+        <div class="modal-text">${s.d}</div>
+      </div>`).join('')}
+    </div>`;
+
+  if (c.type === 'contact') return `
+    <div class="modal-title">◈ ${c.title}</div>
+    <div class="modal-section">
+      <div class="modal-section-label">// GET IN TOUCH</div>
+      <div class="modal-text" style="margin-bottom:1.2rem">I'm currently available for new projects. Whether you have an idea or just want to chat — I'd love to hear from you.</div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem">
+        <div style="display:flex;gap:1rem;align-items:center">
+          <span style="font-size:1.2rem">✉</span>
+          <div>
+            <div style="font-family:var(--pixel);font-size:0.35rem;color:#666;letter-spacing:0.1em">EMAIL</div>
+            <div class="modal-text">hello@pearl.dev</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:1rem;align-items:center">
+          <span style="font-size:1.2rem">📍</span>
+          <div>
+            <div style="font-family:var(--pixel);font-size:0.35rem;color:#666;letter-spacing:0.1em">LOCATION</div>
+            <div class="modal-text">Johannesburg, South Africa</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:1rem;align-items:center">
+          <span style="font-size:1.2rem">⚡</span>
+          <div>
+            <div style="font-family:var(--pixel);font-size:0.35rem;color:#666;letter-spacing:0.1em">STATUS</div>
+            <div class="modal-text" style="color:var(--pink-deep)">Available for New Projects</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">// SOCIALS</div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+        ${['GitHub','LinkedIn','Twitter','Dribbble'].map(s=>`<div style="font-family:var(--pixel);font-size:0.38rem;padding:0.5em 0.8em;border:1px solid rgba(212,83,126,0.3);color:var(--pink);letter-spacing:0.1em;cursor:pointer;transition:background 0.2s" onmouseenter="this.style.background='rgba(212,83,126,0.2)'" onmouseleave="this.style.background='transparent'">${s}</div>`).join('')}
+      </div>
+    </div>`;
+
+  return `<div class="modal-title">${c.title}</div>`;
+}
+
+// ─────────────────────────────────────────
+// MINIMAP
+// ─────────────────────────────────────────
+function drawMinimap() {
+  const canvas = document.getElementById('minimap-canvas');
+  const ctx = canvas.getContext('2d');
+  const scaleX = canvas.width / WORLD_W;
+  const scaleY = canvas.height / WORLD_H;
+
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  rooms.forEach(r => {
+    ctx.fillStyle = 'rgba(212,83,126,0.3)';
+    ctx.strokeStyle = 'rgba(212,83,126,0.7)';
+    ctx.lineWidth = 1;
+    ctx.fillRect(r.x * scaleX, r.y * scaleY, r.w * scaleX, r.h * scaleY);
+    ctx.strokeRect(r.x * scaleX, r.y * scaleY, r.w * scaleX, r.h * scaleY);
+  });
+
+  // Player dot
+  ctx.fillStyle = '#ff6baa';
+  ctx.shadowColor = '#ff6baa';
+  ctx.shadowBlur = 4;
+  ctx.fillRect(player.x * scaleX - 2, player.y * scaleY - 2, 4, 4);
+  ctx.shadowBlur = 0;
+}
+
+// ─────────────────────────────────────────
+// MOBILE CONTROLS (simple on-screen)
+// ─────────────────────────────────────────
+function initMobileControls() {
+  const hasTouch = 'ontouchstart' in window;
+  if (!hasTouch) return;
+  // add a simple D-pad overlay for touch
+  const pad = document.createElement('div');
+  pad.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:600;display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:4px;';
+  pad.innerHTML = `
+    <div></div>
+    <div id="mb-up" style="background:rgba(212,83,126,0.2);border:1px solid var(--pink-deep);display:flex;align-items:center;justify-content:center;font-family:var(--pixel);font-size:0.5rem;color:var(--pink);cursor:pointer;border-radius:2px">▲</div>
+    <div></div>
+    <div id="mb-left" style="background:rgba(212,83,126,0.2);border:1px solid var(--pink-deep);display:flex;align-items:center;justify-content:center;font-family:var(--pixel);font-size:0.5rem;color:var(--pink);cursor:pointer;border-radius:2px">◄</div>
+    <div id="mb-down" style="background:rgba(212,83,126,0.2);border:1px solid var(--pink-deep);display:flex;align-items:center;justify-content:center;font-family:var(--pixel);font-size:0.5rem;color:var(--pink);cursor:pointer;border-radius:2px">▼</div>
+    <div id="mb-right" style="background:rgba(212,83,126,0.2);border:1px solid var(--pink-deep);display:flex;align-items:center;justify-content:center;font-family:var(--pixel);font-size:0.5rem;color:var(--pink);cursor:pointer;border-radius:2px">►</div>
+  `;
+  document.body.appendChild(pad);
+
+  const eBtn = document.createElement('div');
+  eBtn.style.cssText = 'position:fixed;bottom:20px;left:160px;z-index:600;width:56px;height:56px;background:rgba(212,83,126,0.3);border:2px solid var(--pink-deep);display:flex;align-items:center;justify-content:center;font-family:var(--pixel);font-size:0.45rem;color:var(--pink);cursor:pointer;border-radius:50%;';
+  eBtn.textContent = 'E';
+  document.body.appendChild(eBtn);
+  eBtn.addEventListener('touchstart', () => { if (nearInteractable) handleInteract(); });
+
+  [['mb-up','arrowup'],['mb-down','arrowdown'],['mb-left','arrowleft'],['mb-right','arrowright']].forEach(([id,key])=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; }, {passive:false});
+    el.addEventListener('touchend',  e => { e.preventDefault(); keys[key] = false; }, {passive:false});
+  });
+}
+
+// ─────────────────────────────────────────
+// GAME LOOP
+// ─────────────────────────────────────────
+let lastTime = 0;
+
+function gameLoop(timestamp = 0) {
+  const dt = Math.min((timestamp - lastTime) / 16.67, 3);
+  lastTime = timestamp;
+
+  if (document.getElementById('modal-overlay').classList.contains('open')) {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  // Movement
+  let dx = 0, dy = 0;
+  if (keys['arrowleft']  || keys['a']) dx -= 1;
+  if (keys['arrowright'] || keys['d']) dx += 1;
+  if (keys['arrowup']    || keys['w']) dy -= 1;
+  if (keys['arrowdown']  || keys['s']) dy += 1;
+
+  // Normalize diagonal
+  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+  const speed = player.speed * dt;
+  const nx = player.x + dx * speed;
+  const ny = player.y + dy * speed;
+
+  if (isWalkable(nx, player.y)) player.x = nx;
+  if (isWalkable(player.x, ny)) player.y = ny;
+
+  // Walking animation
+  const moving = dx !== 0 || dy !== 0;
+  const playerEl = document.getElementById('player');
+  if (moving !== isMoving) {
+    isMoving = moving;
+    playerEl.classList.toggle('walking', moving);
+  }
+
+  // Flip sprite based on direction
+  if (dx < 0) playerEl.style.transform = 'scaleX(-1)';
+  else if (dx > 0) playerEl.style.transform = 'scaleX(1)';
+
+  updateCamera();
+  applyCamera();
+  updatePlayerEl();
+
+  // Interactable detection
+  nearInteractable = findNearInteractable();
+  const hint = document.getElementById('interact-hint');
+  if (nearInteractable) {
+    hint.style.display = 'block';
+    let label = 'interact';
+    if (nearInteractable.type === 'door') label = `enter ${nearInteractable.data.label}`;
+    if (nearInteractable.type === 'npc') label = 'talk to Pearl';
+    if (nearInteractable.type === 'collectible') label = 'pick up item';
+    hint.textContent = `Press E to ${label}`;
+  } else {
+    hint.style.display = 'none';
+  }
+
+  // Active door highlight
+  document.querySelectorAll('.door').forEach(d => d.classList.remove('active'));
+  if (nearInteractable && nearInteractable.type === 'door') {
+    const idx = nearInteractable.index;
+    const doorEl = document.getElementById('door-' + idx);
+    if (doorEl) doorEl.classList.add('active');
+  }
+
+  // Update HUD room name
+  let currentRoom = 'OVERWORLD';
+  for (const r of rooms) {
+    if (isInsideRoom(r, player.x, player.y)) {
+      currentRoom = r.name;
+      break;
+    }
+  }
+  document.getElementById('hud-room-name').textContent = currentRoom;
+
+  // Update speech bubble position if visible
+  const sb = document.getElementById('speech-bubble');
+  if (sb.style.display !== 'none') {
+    const screenX = player.x - camera.x;
+    const screenY = player.y - camera.y + 52;
+    sb.style.left = Math.max(8, Math.min(window.innerWidth - 360, screenX - 120)) + 'px';
+    sb.style.top  = Math.max(60, screenY - 130) + 'px';
+  }
+
+  // Minimap every 10 frames
+  if (Math.round(timestamp / 16) % 10 === 0) drawMinimap();
+
+  requestAnimationFrame(gameLoop);
+}
+</script>
+</body>
+</html>
